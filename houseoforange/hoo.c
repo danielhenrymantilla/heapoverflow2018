@@ -140,8 +140,7 @@ void houseoforange (void)
   fake2.fd = (void *) &fake1;
   /* We got &fake1->bk->fd == &fake1 */
 
-/* 4) Overflow again to corrupt top's bk ptr *
- * (leave the other fields as they are)      */
+/* 4) Overflow again to corrupt top's bk ptr */
   myfprintf(STREAM, "\nOverflow => ");
   set(old_top->sz, new_top_size);
   myfprintf(STREAM, "            ");
