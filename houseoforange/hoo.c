@@ -110,11 +110,12 @@ void houseoforange (void)
   myfprintf(STREAM, "\nOverflow => ");
   set(top->sz, new_top_size);
   print_struct_ptr(top);
+  myfprintf(STREAM, "\n");
 
 /* 3) Malloc of slightly big size: around PAGE_SZ = 0x1000 */
   declare(void *, new_mem, malloc(PAGE_SZ));
-  if ((uintptr_t) mem_get_chunk(new_mem) & (PAGE_SZ - 1) == 0)
-    colored_printf("Allocation answered in new heap.\n", U(malloc(PAGE_SZ)));
+  if (!((uintptr_t) mem_get_chunk(new_mem) & (PAGE_SZ - 1)))
+    colored_printf("Allocation answered in new page.\n");
 
   /*
    * Since PAGE_SZ > new_top_size, a new heap (and a new top) are allocated
