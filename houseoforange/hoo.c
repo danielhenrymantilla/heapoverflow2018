@@ -115,7 +115,7 @@ void houseoforange (void)
    * Then the old_top becomes an ordinary chunk that is to be freed
    * and put in the unsorted bin
    */
-  #define old_top top/* alias for clarity */
+  #define old_top top /* alias for clarity */
   print_struct_ptr(old_top);
 
 
