@@ -110,7 +110,6 @@ void houseoforange (void)
   myfprintf(STREAM, "Overflow => ");
   set(top->sz, new_top_size);
   print_struct_ptr(top);
-  myfprintf(STREAM, "\n");
 
 /* 3) Malloc of slightly big size: around PAGE_SZ = 0x1000 */
   declare(void *, new_mem, malloc(PAGE_SZ));
