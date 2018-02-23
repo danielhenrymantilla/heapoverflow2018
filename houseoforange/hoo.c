@@ -52,7 +52,7 @@ void print_hex_contents (void * addr, size_t count)
       colored_printf("| ");
     colored_printf(BT " ", U(((char *) addr)[i]));
   }
-  colored_printf("|\n");
+  colored_printf("|\n\n");
 }
 
 #define print_struct_ptr(x) \
@@ -107,7 +107,7 @@ void houseoforange (void)
   size_t new_top_size = top->sz & (PAGE_SZ - 1);
 
 /* 2) Overflow it to corrupt top's size */
-  myfprintf(STREAM, "\nOverflow => ");
+  myfprintf(STREAM, "Overflow => ");
   set(top->sz, new_top_size);
   print_struct_ptr(top);
   myfprintf(STREAM, "\n");
@@ -141,7 +141,7 @@ void houseoforange (void)
   /* We got &fake1->bk->fd == &fake1 */
 
 /* 4) Overflow again to corrupt top's bk ptr */
-  myfprintf(STREAM, "\nOverflow => ");
+  myfprintf(STREAM, "Overflow => ");
   set(old_top->sz, new_top_size);
   myfprintf(STREAM, "            ");
   set(old_top->fd, WHATEVER);
