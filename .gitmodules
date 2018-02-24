@@ -1,6 +1,3 @@
 [submodule "overleaf"]
 	path = overleaf
 	url = https://git.overleaf.com/13567355fryjvtgqcqqs
-[submodule "heaptrace"]
-	path = heaptrace
-	url = git@github.com:danielhenrymantilla/heaptrace.git
