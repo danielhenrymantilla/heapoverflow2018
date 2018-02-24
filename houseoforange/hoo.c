@@ -14,12 +14,14 @@
 /* myprinter prints without using nor affecting the heap */
 #ifndef DISABLE_MYPRINTER
 # include "myprinter.h"
-# define U(x) ((uintptr_t) (x))
+# define X(x) ((uintptr_t) (x))
+# define B(x) ((uintptr_t) (x))
 #else
 # define myfprintf fprintf
-# define XT "0x%08x"
+# define XT "0x%lx"
 # define BT "0x%02hhx"
-# define U(x) ((int) (x))
+# define X(x) ((unsigned long) (x))
+# define B(x) ((unsigned int) (x))
 #endif
 
 #define colored_printf(fmt, ...) \
@@ -46,11 +48,11 @@ struct chunk {
 /* ----------- Helpers ---------- */
 void print_hex_contents (void * addr, size_t count)
 {
-  colored_printf(XT ":\n", U(addr));
+  colored_printf(XT ":\n", X(addr));
   for (size_t i = 0; i < count; ++i) {
     if (!(i % sizeof(void *)))
       colored_printf("| ");
-    colored_printf(BT " ", U(((char *) addr)[i]));
+    colored_printf(BT " ", B(((char *) addr)[i]));
   }
   colored_printf("|\n\n");
 }
@@ -65,7 +67,7 @@ do { \
 do { \
   typeof(lhs) _eval = (typeof(lhs)) (rhs); \
   myfprintf(STREAM, XT ": " XT " <- " XT " (= " #rhs ")\n", \
-    U(&lhs), U(lhs), U(_eval)); \
+    X(&lhs), X(lhs), X(_eval)); \
   lhs = _eval; \
 } while (0)
 
@@ -74,7 +76,7 @@ do { \
   { \
     lhs_ty _eval = rhs; \
     myfprintf(STREAM, #lhs_ty " " #lhs_name " = " #rhs " = " XT "\n", \
-      _eval); \
+      X(_eval)); \
     lhs_name = _eval; \
   }
 
@@ -103,7 +105,7 @@ void houseoforange (void)
   print_struct_ptr(top);
 
   myfprintf(STREAM,
-    "The 3 last nibbles of top->sz = " XT " must not change.\n", U(top->sz));
+    "The 3 last nibbles of top->sz = " XT " must not change.\n", X(top->sz));
   size_t new_top_size = top->sz & (PAGE_SZ - 1);
 
 /* 2) Overflow it to corrupt top's size */
@@ -159,7 +161,7 @@ void houseoforange (void)
     1 + (get_ebp() - (intptr_t) array) / sizeof(intptr_t);
   if (offset_to_eip_idx < 0x100) {
     myfprintf(STREAM, "\narray[" BT "] <- " XT " (= &win)\n",
-      U(offset_to_eip_idx), U(&win));
+      B(offset_to_eip_idx), X(&win));
     array[offset_to_eip_idx] = (intptr_t) &win;
   }
 }

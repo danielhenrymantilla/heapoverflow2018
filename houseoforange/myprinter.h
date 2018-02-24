@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#if defined(__ARCH__) && __ARCH__ == 64
+#if defined(__x86_64__)
  #define __HEX_TOKEN__	"%xdeadbeefdeadbeef"
 #else
  #define __HEX_TOKEN__	"%xdeadbeef"
