@@ -26,7 +26,9 @@ static long tracee_deref (void * ptr)
   printd_low(BANNER "tracee_deref: *(%p) = ", ptr);
 #endif
   long ret = ptrace(PTRACE_PEEKDATA, tracee->pid, ptr, NULL);
+#ifdef PEEKDATA_STRICT
   if (ret == -1) failwith("tracee_deref: PTRACE_PEEKDATA");
+#endif
 #if defined(DEBUG) && DEBUG >= 2
   printd_low("%p\n", (void *) ret);
 #endif
@@ -151,6 +153,7 @@ static int handle_traps (struct trap_context * ctxt,
         fprintf(STREAM, " = %p", (void *) ret);
       }
       fprintf(STREAM, "\n");
+      print_arena(main_arena);
       /* getchar() */;
       switch (as_enum(ctxt->name)) {
       case MALLOC:
