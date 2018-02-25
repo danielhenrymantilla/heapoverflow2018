@@ -4,3 +4,6 @@
 [submodule "heaptrace"]
 	path = heaptrace
 	url = git@github.com:danielhenrymantilla/heaptrace.git
+[submodule "slides"]
+	path = slides
+	url = https://git.overleaf.com/13863689vxzpwfsnshzc
