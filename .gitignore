@@ -51,6 +51,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-mtrace/core
-mtrace/example/core
 *.gdb_history
