@@ -91,7 +91,7 @@ __attribute__((noreturn)) void win (void)
   exit(EXIT_SUCCESS);
 }
 
-void lose (void) { myfprintf(stderr, "Exploit failed.\n"); }
+void lose (void) { myfprintf(STREAM, "Exploit failed.\n"); }
 
 /* ===== HOUSE OF ORANGE ===== */
 void houseoforange (void)
